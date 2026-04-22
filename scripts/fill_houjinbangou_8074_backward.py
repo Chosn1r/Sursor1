@@ -21,6 +21,9 @@ import unicodedata
 from collections import defaultdict
 from pathlib import Path
 
+from openpyxl import Workbook
+from openpyxl.styles import Font
+
 from pypdf import PdfReader
 
 
@@ -31,6 +34,7 @@ PDF_PATH = Path(
 )
 NTA_CSV_PATH = WORKSPACE / "data/raw/00_zenkoku_all_20260331.csv"
 OUTPUT_PATH = WORKSPACE / "output/8074_backward_houjinbangou.csv"
+SUCCESS_XLSX_PATH = WORKSPACE / "output/8074_backward_success_only.xlsx"
 
 MAX_REGISTRATION_NUMBER = 8074
 NTA_NAME_COL = 6
@@ -190,6 +194,54 @@ def write_csv(rows: list[dict[str, str]]) -> None:
         writer.writerows(rows)
 
 
+def write_success_xlsx(rows: list[dict[str, str]]) -> None:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "成功匹配"
+
+    fieldnames = [
+        "registration_number",
+        "business_type",
+        "registration_date",
+        "name_in_pdf",
+        "association",
+        "official_name",
+        "corporate_number",
+        "official_address_with_postcode",
+    ]
+    headers = {
+        "registration_number": "登録番号",
+        "business_type": "業種",
+        "registration_date": "登録年月日",
+        "name_in_pdf": "旅行業者名（PDF）",
+        "association": "正会員加入団体",
+        "official_name": "法人名（国税庁）",
+        "corporate_number": "法人番号",
+        "official_address_with_postcode": "本所住所（郵便番号付き）",
+    }
+
+    for col_idx, key in enumerate(fieldnames, start=1):
+        cell = sheet.cell(row=1, column=col_idx, value=headers[key])
+        cell.font = Font(bold=True)
+
+    success_rows = [
+        row for row in rows if row.get("match_status") == "unique_match"
+    ]
+    for row_idx, row in enumerate(success_rows, start=2):
+        for col_idx, key in enumerate(fieldnames, start=1):
+            sheet.cell(row=row_idx, column=col_idx, value=row.get(key, ""))
+
+    sheet.freeze_panes = "A2"
+    sheet.auto_filter.ref = sheet.dimensions
+
+    for column_cells in sheet.columns:
+        max_length = max(len(str(cell.value or "")) for cell in column_cells)
+        adjusted_width = min(max(max_length + 2, 12), 60)
+        sheet.column_dimensions[column_cells[0].column_letter].width = adjusted_width
+
+    workbook.save(SUCCESS_XLSX_PATH)
+
+
 def main() -> None:
     if not PDF_PATH.exists():
         raise FileNotFoundError(f"PDF not found: {PDF_PATH}")
@@ -198,12 +250,14 @@ def main() -> None:
 
     rows = build_rows(parse_pdf_entries())
     write_csv(rows)
+    write_success_xlsx(rows)
 
     unique_count = sum(1 for row in rows if row["match_status"] == "unique_match")
     duplicate_count = sum(1 for row in rows if row["match_status"] == "duplicate_name")
     not_found_count = sum(1 for row in rows if row["match_status"] == "not_found")
 
     print(f"Wrote {len(rows)} rows to {OUTPUT_PATH}")
+    print(f"Wrote {unique_count} successful rows to {SUCCESS_XLSX_PATH}")
     print(
         "Match summary:",
         f"unique={unique_count}",
