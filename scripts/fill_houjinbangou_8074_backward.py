@@ -27,14 +27,14 @@ from openpyxl.styles import Font
 from pypdf import PdfReader
 
 
-WORKSPACE = Path("/workspace")
+REPO_ROOT = Path(__file__).resolve().parent.parent
 PDF_PATH = Path(
     "/home/ubuntu/.cursor/projects/workspace/uploads/"
     "___________________________________________.pdf"
 )
-NTA_CSV_PATH = WORKSPACE / "data/raw/00_zenkoku_all_20260331.csv"
-OUTPUT_PATH = WORKSPACE / "output/8074_backward_houjinbangou.csv"
-SUCCESS_XLSX_PATH = WORKSPACE / "output/8074_backward_success_only.xlsx"
+NTA_CSV_PATH = REPO_ROOT / "data/raw/00_zenkoku_all_20260331.csv"
+OUTPUT_PATH = REPO_ROOT / "output/8074_backward_houjinbangou.csv"
+SUCCESS_XLSX_PATH = REPO_ROOT / "data/8074_backward_success_only.xlsx"
 
 MAX_REGISTRATION_NUMBER = 8074
 NTA_NAME_COL = 6
