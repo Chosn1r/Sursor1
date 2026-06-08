@@ -1,1 +1,4 @@
 /data/raw/
+wecom_chatbot/.env
+__pycache__/
+*.pyc
